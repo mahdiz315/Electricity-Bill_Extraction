@@ -2,4 +2,11 @@ streamlit
 pdfplumber
 altair
 xlsxwriter
- openpyxl
+openpyxl
+re
+pandas
+os
+numpy
+datetime 
+import matplotlib
+time
