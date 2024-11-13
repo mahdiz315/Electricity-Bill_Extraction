@@ -9,6 +9,29 @@ from openpyxl.styles import PatternFill
 from openpyxl.worksheet.dimensions import SheetFormatProperties
 from datetime import datetime
 import datetime as dt 
+import matplotlib.pyplot as plt
+import time
+
+
+def calculate_seasonal_consumption(df):
+    seasons = {
+        'Winter': [12, 1, 2],  # Winter months: Dec, Jan, Feb
+        'Spring': [3, 4, 5],   # Spring months: Mar, Apr, May
+        'Summer': [6, 7, 8],   # Summer months: Jun, Jul, Aug
+        'Fall': [9, 10, 11]    # Fall months: Sep, Oct, Nov
+    }
+    
+    seasonal_totals = {}
+    
+    for season, months in seasons.items():
+        # Check if the required months are present in the DataFrame
+        available_months = [month for month in months if month in df.columns]
+        if available_months:
+            seasonal_totals[season] = df.loc["Total Comsuption KWH", available_months].sum()
+        else:
+            print(f"No available months found for {season}. Skipping calculation for this season.")
+    
+    return seasonal_totals
 
 # Function to extract data from a PDF file
 def extract_data(pdf_file):
@@ -48,7 +71,7 @@ def extract_data(pdf_file):
                             extracted_data["Demand KW"] = float(demand_kw_match[0].replace(',', ''))
                         else:
                             # Handle the case where demand_kw_match is empty or None
-                            print("demand_kw_match is empty or None")
+                            #print("demand_kw_match is empty or None")
                             extracted_data["Demand KW"] = None  # or some default value
                         
 
@@ -543,8 +566,12 @@ def extract_data(pdf_file):
     # Inside the extract_data function, after extracting all other values
     else:
       print("dorostedoroste")
-      extracted_data.get("Rate", "") == "GSD-1 GENERAL"
-      
+      if extracted_data.get("Rate", "") == "GSD-1 GENERAL":
+            # Your logic for GSD-1 GENERAL goes here
+            print("Rate is GSD-1 GENERAL")
+      else:
+            print("Rate is not GSD-1 GENERAL")
+            
       non_fuel = extracted_data.get("Non-fuel:", 0)
       fuel = extracted_data.get("Fuel:", 0)
       #demand_kw = extracted_data.get("Demand KW", 0)
@@ -676,6 +703,7 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
            
         missing_months_by_account = []
         for i, account_data in enumerate(data_by_account):
+            accounts_usage= {}
             account_sheet_name = f'Account_{i + 1}'
             df_account = pd.DataFrame(account_data)
             # Transpose the DataFrame
@@ -711,7 +739,7 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
                 
                 column_values_month = []  # To store the result
                 for month in missing_months_account1:
-                    
+                    print("mise youuuuuu")
                     previous_month = month - 1
                     next_month = month + 1
                     column_values_month=[]
@@ -791,14 +819,39 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
                     print("empty")
                 else:          
                     # Flatten the list of coefficients
-                    flat_coefficients = [coeff[0] for coeff in coefficients]
+                    # print("1111111111111111111111111111111111111")
+                    # flat_coefficients = [coeff[0] for coeff in coefficients]
+                    # Find the maximum coefficient value and its month
+                    
+                    # Flatten the list of coefficients
+                    print("1111111111111111111111111111111111111")
+                    flat_coefficients = coefficients  # Direct assignment since it's already a flat list
+                    print("Flat Coefficients:", flat_coefficients)
+
                     # Find the maximum coefficient value and its month
                     max_coefficient = max(flat_coefficients)
-                    max_coefficient_month = flat_coefficients.index(max_coefficient) + 1    
+                    max_coefficient_month = flat_coefficients.index(max_coefficient) + 1  # Adding 1 to make it 1-indexed
+
                     service_month_row = df_account_transposed.loc["Service Month"]
+                    print("Service Month Row:", service_month_row)
+                    print("Max Coefficient Month:", max_coefficient_month)
+
+                    
+                    
+                    
+                    
+                    
+                    
+                    # max_coefficient = max(flat_coefficients)
+                    # max_coefficient_month = flat_coefficients.index(max_coefficient) + 1    
+                    # service_month_row = df_account_transposed.loc["Service Month"]
+                    print(service_month_row)
+                    print(2222222222222222222222222222222222222)
+                    print(max_coefficient_month)
                     # Check if 1 is missing
                     if max_coefficient_month not in missing_months_account and missing_months_account:
                         # Find the row where "Service Month" is 1
+                        print("nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")
                         index_of_1 = service_month_row[service_month_row == max_coefficient_month].index[0]
                         # Extract the corresponding column
                         based_anchorm_co = df_account_transposed[index_of_1]
@@ -929,7 +982,7 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
                             
                             
                             for missing_month in missing_months_account:
-                                
+                                    print("dididididididi")
                                 
                                     def multiply_by_constant(value):
                                         try:
@@ -1016,7 +1069,11 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
             
             #row_label = "Service to"
             #column_names = df_account_transposed.columns
-
+            print(df_account_transposed)
+            Rate_account={}
+            Rate_account1=df_account_transposed.loc['Rate']
+            Rate_account[account_number]=Rate_account1.iloc[1]
+            
             # Now, let's find the corresponding values in each column for the specified row
             #values_for_row = df_account_transposed.loc[row_label]               
             #value_at_position = df_account_transposed.at["Service to", 3]
@@ -1055,6 +1112,9 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
             row_to_update_demand_rate = df_account_transposed.loc["Demand:"]
                         
             data_by_account_transposed.append(df_account_transposed)
+            ##############################################################
+            Demand_KW_Month = df_account_transposed.loc['Usage'] 
+            accounts_usage[account_number] = Demand_KW_Month
             
             consolidate_transpose_df = pd.concat(data_by_account_transposed).groupby(level=0).sum()
             #print(consolidate_transpose_df)         
@@ -1100,20 +1160,14 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
             # Add the new row to the DataFrame
             consolidate_transpose_df.loc["Demand $/kwh"] = demand_per_kwh
             consolidate_transpose_df.loc["Non-TOU Consumption KWH"]=consolidate_transpose_df.loc["Total Comsuption KWH"]-consolidate_transpose_df.loc["On-Peak kWh used"]-consolidate_transpose_df.loc["Off-peak kWh used"]
-            print(consolidate_transpose_df.loc["Non-TOU Consumption KWH"])
-            print(consolidate_transpose_df.loc["On-Peak kWh used"])
-            print(consolidate_transpose_df.loc["Total Comsuption KWH"])
-            print("lklkinjoooojahah")
-
+         
             consolidate_transpose_df.loc["Energy Charge Non-TOU ($)"]=consolidate_transpose_df.loc["Energy Charge"]-consolidate_transpose_df.loc["Energy Charge On peak"]-consolidate_transpose_df.loc["Energy Charge Off peak"]
             if not consolidate_transpose_df.loc["Non-TOU Consumption KWH"].empty and (consolidate_transpose_df.loc["Non-TOU Consumption KWH"] != 0).any():
                consolidate_transpose_df.loc["Energy $/kwh on Non-TOU"]=consolidate_transpose_df.loc["Energy Charge Non-TOU ($)"]/consolidate_transpose_df.loc["Non-TOU Consumption KWH"]
 
             if not consolidate_transpose_df.loc["Fuel Charge"].empty and (consolidate_transpose_df.loc["Fuel Charge"]!=0).any():
                consolidate_transpose_df.loc["Fuel Charge Non-TOU $"]=consolidate_transpose_df.loc["Fuel Charge"]-consolidate_transpose_df.loc["Fuel Charge on peak $"]-consolidate_transpose_df.loc["Fuel Charge off peak $"]
-               
-            print("innnnnnnn")
-            print(consolidate_transpose_df)
+             
 
             if not consolidate_transpose_df.loc["Non-TOU Consumption KWH"].empty and (consolidate_transpose_df.loc["Non-TOU Consumption KWH"] != 0).any():
                consolidate_transpose_df.loc["Fuel $/KWH Non-TOU"]=consolidate_transpose_df.loc["Fuel Charge Non-TOU $"]/consolidate_transpose_df.loc["Non-TOU Consumption KWH"]
@@ -1245,7 +1299,8 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
                 'Sum': 'Sum'
             }
             
-            
+            seasonal_consumption = calculate_seasonal_consumption(consolidate_transpose_df)
+
             # Rename the columns in the DataFrame using the mapping
             consolidate_transpose_df.columns = [month_mapping[col] for col in consolidate_transpose_df.columns]
             
@@ -1272,8 +1327,8 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
                 "On-Peak kWh used": "Consumption On Peak kwh","Fuel Charge" : "Total Fuel Charge ($)","Fuel Charge on peak $":"Fuel Charge on peak ($)","Fuel Charge off peak $":"Fuel Charge off peak ($)",
                 "Off-peak kWh used": "Consumption off-Peak kwh","Total Energy Charge":"Total Energy & Fuel Charge ($)",
                 "Demand:" : "Demand_$/kwh- Non TOU" , "Fuel:": "Average Fuel $/kWh",
-                "Non-fuel energy charge: on-peak" : " Energy $/kwh on peak","Fuel Charge Non-TOU $":"Fuel Charge Non-TOU ($)",
-                "Non-fuel energy charge: off-peak" :  " Energy $/kwh off peak","Total Electric cost":"Total Electric cost ($)",
+                "Non-fuel energy charge: on-peak" : "Energy $/kwh on peak","Fuel Charge Non-TOU $":"Fuel Charge Non-TOU ($)",
+                "Non-fuel energy charge: off-peak" :  "Energy $/kwh off peak","Total Electric cost":"Total Electric cost ($)",
                 "Fuel charge-On-peak" : "Fuel Charge $/kwh on peak","Total Demand Charge":"Total Demand Charge ($)",
                  "Fuel charge-Off-peak" : "Fuel Charge $/kwh off peak","Total Demand": "Total Demand kw",
                  "Maximum demand" : "Maximum Demand kw" , "On-peak demand" : "On-peak Demand",
@@ -1292,6 +1347,85 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
              # Save the consolidated transpose data to the 'Consolidate Transpose' sheet
             #consolidate_transpose_df = consolidate_transpose_df.shift(periods=2, axis=1).shift(periods=3, axis=0)
             consolidate_transpose_df.to_excel(excel_writer, sheet_name='Consolidated')
+            
+            
+            E_on_p1=consolidate_transpose_df.loc["Energy $/kwh on peak"]
+            E_on_p=sum(E_on_p1)/12
+            
+            E_off_p1=consolidate_transpose_df.loc["Energy $/kwh off peak"]
+            E_off_p=sum(E_off_p1)/12
+            
+            
+            F_on_p1=consolidate_transpose_df.loc["Fuel Charge $/kwh on peak"]
+            F_on_p=sum(F_on_p1)/12
+            
+            F_off_p1=consolidate_transpose_df.loc["Fuel Charge $/kwh off peak"]
+            F_off_p=sum(F_off_p1)/12
+            
+            
+            E_F_on_p=E_on_p +F_on_p
+            E_F_off_p=E_off_p + F_off_p
+            
+            
+            
+           
+            
+            
+            ####################################################################################################################
+            total_demand_kw_row = consolidate_transpose_df.loc['Total Demand kw']
+            total_demand_kw_12_months = total_demand_kw_row.iloc[:12]  
+            ####################################################################################################################
+            Total_Demand_Charge1= consolidate_transpose_df.loc['Total Demand Charge ($)']
+            Total_Demand_Charge=Total_Demand_Charge1.iloc[:12]
+            ####################################################################################################################
+            months111 = consolidate_transpose_df.columns[:12] 
+            ####################################################################################################################
+            Total_Comsuption_kwh1= consolidate_transpose_df.loc['Total Comsuption kwh']
+            Total_Comsuption_kwh=Total_Comsuption_kwh1.iloc[:12]
+            ####################################################################################################################
+            Total_Energy_Fuel_Charge1= consolidate_transpose_df.loc['Total Energy & Fuel Charge ($)']
+            Total_Energy_Fuel_Charge=Total_Energy_Fuel_Charge1.iloc[:12]
+            ####################################################################################################################
+            Demand_Rate1=consolidate_transpose_df.loc['Demand Rate']
+            Demand_Rate=round(Demand_Rate1.loc['Sum'], 3)
+            print("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
+            print(Demand_Rate)
+            ####################################################################################################################
+            Electricity_Rate1=consolidate_transpose_df.loc['Average $/kwh cost (Exc fees)']
+            Electricity_Rate=round(Electricity_Rate1.loc['Sum'],3)
+            ####################################################################################################################
+            
+            Late_payment_charge1=consolidate_transpose_df.loc['Late payment charge ($)']
+            Late_payment_charge=round(Late_payment_charge1.loc['Sum'],3)
+            ####################################################################################################################
+            Consumption_on_Peak_kwh1= consolidate_transpose_df.loc['Consumption On Peak kwh']
+            Consumption_on_Peak_kwh=Consumption_on_Peak_kwh1.iloc[:12]
+            
+            ####################################################################################################################
+            Consumption_off_Peak_kwh1= consolidate_transpose_df.loc['Consumption off-Peak kwh']
+            Consumption_off_Peak_kwh=Consumption_off_Peak_kwh1.iloc[:12]
+            
+            ####################################################################################################################
+            Energy_charge_off_peak1= consolidate_transpose_df.loc['Energy $/kwh off peak'] 
+            
+            Energy_charge_off_peak_10=sum(Energy_charge_off_peak1.iloc[:12])/12*sum(Consumption_off_Peak_kwh)*0.1
+            
+            ####################################################################################################################
+            Energy_charge_on_peak_1= consolidate_transpose_df.loc['Energy $/kwh on peak'] 
+            print("ujujujujuj")
+            Energy_charge_on_peak_10=sum(Energy_charge_on_peak_1.iloc[:12])/12*sum(Consumption_on_Peak_kwh)*0.1
+            print("klklakaljsjdhfhfhfhfh")
+            ####################################################################################################################
+            Fuel_charge_on_peak_1= consolidate_transpose_df.loc['Fuel Charge $/kwh on peak'] 
+            Fuel_charge_on_peak_10=sum(Fuel_charge_on_peak_1.iloc[:12])/12*sum(Consumption_on_Peak_kwh)*0.1
+
+            ####################################################################################################################
+            Fuel_charge_off_peak_1= consolidate_transpose_df.loc['Fuel Charge $/kwh off peak'] 
+            Fuel_charge_off_peak_10=sum(Fuel_charge_off_peak_1.iloc[:12])/12*sum(Consumption_off_Peak_kwh)*0.1
+            ####################################################################################################################
+            Recommendation_move_on_off=(Energy_charge_on_peak_10+Fuel_charge_on_peak_10)+(Energy_charge_off_peak_10+Fuel_charge_off_peak_10)
+            
+            
             
             
             
@@ -1623,38 +1757,736 @@ def extract_and_consolidate_data(uploaded_files, num_accounts, coefficients):
         
 
     print(f"Data saved to {excel_filename}")
-    return excel_filename
+    
 
+    # Ensure that no implicit boolean values are being evaluated or returned
+    if isinstance(extracted_data, bool):
+        extracted_data = None  # Set to None if a boolean is encountered unexpectedly
+    return excel_filename, seasonal_consumption, accounts_usage[account_number],total_demand_kw_12_months,Total_Comsuption_kwh,months111,Demand_Rate,Electricity_Rate, Total_Demand_Charge,Total_Energy_Fuel_Charge,Late_payment_charge,Rate_account[account_number],Consumption_on_Peak_kwh,Consumption_off_Peak_kwh,Recommendation_move_on_off,E_F_on_p,E_F_off_p
     
 
 
-# Streamlit App GUI
 def app():
-    st.title("FPL Bill PDF Extractor")
-    
-    # Input for number of accounts
-    num_accounts = st.number_input("Enter the number of accounts:", min_value=1, step=1)
-    
-    # Define temperature coefficients for each month directly in the code
-    #coefficients = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Default coefficients for 12 months
-    coefficients = [0.5904, 0.6416, 0.6672, 0.6672, 0.6928, 0.7183999999999999, 0.7952, 0.8464, 1.0, 0.7696, 0.744, 0.6672]
+    # Inject CSS styling for customization
+    st.markdown("""
+        <style>
+        /* Background color */
+        .stApp {
+            background-color: #f7f7f7;
+            font-family: 'Arial', sans-serif;
+        }
 
-    # File uploader to upload multiple PDFs
-    uploaded_files = st.file_uploader("Upload multiple FPL PDF files", type="pdf", accept_multiple_files=True)
-    
+        /* Customize headers */
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+            color: #004080;
+            font-weight: bold;
+        }
+
+        /* Customize input fields */
+        .stNumberInput, .stRadio {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        /* Style radio buttons */
+        .stRadio > label {
+            color: #004080;
+        }
+        .stRadio input[type="radio"] {
+            accent-color: #ff6347;
+        }
+
+        /* Customize the file uploader */
+        .stFileUploader {
+            background-color: #eaf2f8;
+            border-radius: 5px;
+            border: 1px solid #cccccc;
+            padding: 10px;
+            color: #004080;
+        }
+
+        /* Style the button */
+        .stButton button {
+            background-color: #ff6347;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .stButton button:hover {
+            background-color: #ff4500;
+        }
+
+        /* Darker and thicker table lines */
+        .stDataFrame, .stTable {
+            border: 10px solid #004080;
+            border-radius: 10px;
+        }
+        
+        /* Table text alignment and padding */
+        .stTable th, .stTable td {
+            text-align: center;
+            padding: 10px;
+            border: 10px solid #004080;
+        }
+
+        /* Justify table content and set font size */
+        .stTable td {
+            text-align: justify;
+            font-size: 14px;
+            color: #333333;
+        }
+
+        /* Make table headers bold and darker */
+        .stTable th {
+            background-color: #004080;
+            color: #ffffff;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Table styling for DataFrame table */
+        .stDataFrame .row_heading, .stDataFrame .blank {
+            display: none;  /* Remove row numbers and blank cells */
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    #st.image(r"c:\Users\mxz881\Desktop\OIP.jpeg", use_column_width=True, caption="hello")
+    #st.image("C:/Users/mxz881/Desktop/logo.jpg", use_column_width=True, caption="hello")
+    # image_path = r"C:\Users\mxz881\Desktop\logo1.jpg"
+    # st.write("Image path exists:", os.path.exists(image_path))
+    # if os.path.exists(image_path):
+    #     st.image(image_path, use_column_width=True, caption="Logo")
+    # else:
+    #     st.write("Error: Image path does not exist. Check the path.")
+    #st.image("static/logo.jpg", use_column_width=True, caption="Logo")
+    import base64
+
+    def get_base64_image(path):
+        with open(path, "rb") as file:
+            data = file.read()
+        return base64.b64encode(data).decode()
+
+    img_base64 = get_base64_image(r"C:\Users\mxz881\Desktop\Logo-University-of-Miami.jpg")
+    html_code = f'<img src="data:image/jpeg;base64,{img_base64}" style="width:20%;">'
+    st.markdown(html_code, unsafe_allow_html=True)
+
+    st.title("Extractor Electricity Bills (Commercial and Industrial Building)")
+
+    # Input for number of accounts
+    num_accounts = st.number_input("Enter the number of accounts (folders):", min_value=1, step=1)
+    # Radio button for window type
+    window_type = st.radio(
+        "Do you use regular windows or impact windows? (Select 'Yes' for regular windows, 'No' for impact windows)",
+        options=["Yes", "No"]
+    )
+
+    # Convert the selection to 1 for 'Yes' and 0 for 'No' if needed
+    if window_type == "Yes":
+        window_value = 1
+    else:
+        window_value = 0
+        # Define temperature coefficients for each month directly in the code
+    coefficients = [0.5904, 0.6416, 0.6672, 0.6672, 0.6928, 0.7184, 0.7952, 0.8464, 1.0, 0.7696, 0.744, 0.6672]
+    # Ask for working hours and working days as inputs
+   # Using st.text_input for direct entry
+    working_hours = int(st.text_input("Enter the working hours per day:", value="8"))
+    working_days = int(st.text_input("Enter the working days per week:", value="5"))
+
+
+    # Calculate operation hours
+    operation_hours = working_hours * working_days * 52  # Assuming 52 weeks in a year
+    # Dictionary to store the uploaded files for each account (folder)
+    uploaded_files_by_account = {}
+
+    # Loop for uploading files for each account
+    for account_number in range(1, num_accounts + 1):
+        uploaded_files = st.file_uploader(f"Upload PDFs for Account {account_number}", type="pdf", accept_multiple_files=True, key=f"account_{account_number}")
+        if uploaded_files:
+            uploaded_files_by_account[account_number] = uploaded_files
+
+    # Placeholder for clearing previous outputs
+    progress_placeholder = st.empty()
+
     if st.button("Extract Data"):
-        if uploaded_files and num_accounts > 0:
-            # Call the function to process the PDFs and generate the Excel file
-            excel_filename = extract_and_consolidate_data(uploaded_files, num_accounts, coefficients)
+        if uploaded_files_by_account and num_accounts > 0:
             
-            # Provide download button for the Excel file
-            with open(excel_filename, "rb") as file:
-                btn = st.download_button(label="Download Excel File",
-                                         data=file,
-                                         file_name=excel_filename,
-                                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+            # Initialize variables for tracking seasonal consumption
+            seasonal_consumption_all_accounts = {}
+            consolidated_seasonal_consumption = {}
+            accounts_usage = {}  # Dictionary to store usage per account
+            Rate_account={}
+            for account_number, uploaded_files in uploaded_files_by_account.items():
+                # Clear previous outputs from the placeholder
+                progress_placeholder.empty()
+
+                
+                # Add error handling around the data extraction
+                try:
+                    st.write(f"Extracting data for Account {account_number}")
+                    excel_filename, seasonal_consumption, accounts_usage[account_number],total_demand_kw_12_months,Total_Comsuption_kwh,months111,Demand_Rate,Electricity_Rate, Total_Demand_Charge,Total_Energy_Fuel_Charge,Late_payment_charge,Rate_account[account_number],Consumption_on_Peak_kwh,Consumption_off_Peak_kwh,Recommendation_move_on_off,E_F_on_p,E_F_off_p = extract_and_consolidate_data(uploaded_files, num_accounts, coefficients)
+                    
+                   
+                    
+                    
+                    
+                    # Explicitly check if there's an issue with how data is being returned or stored
+                    assert isinstance(seasonal_consumption, dict), f"Error: Unexpected type for seasonal_consumption: {type(seasonal_consumption)}"
+                    
+                except Exception as e:
+                    st.error(f"Error in data extraction for Account {account_number}: {e}")
+                    continue
+
+                # Store seasonal consumption if it's valid
+                if seasonal_consumption:
+                    seasonal_consumption_all_accounts[account_number] = seasonal_consumption
+
+                    # Consolidate seasonal consumption across accounts
+                    for season, consumption in seasonal_consumption.items():
+                        consolidated_seasonal_consumption[season] = consolidated_seasonal_consumption.get(season, 0) + consumption
+
+                    
+                    # Debugging step: plotting data for this account
+                    
+                    # Plot the seasonal data
+                    #if seasonal_consumption:
+                    #    st.write(f"Seasonal Total Consumption (kWh) for Account {account_number}:")
+                    #    seasons = list(seasonal_consumption.keys())
+                    #    consumption_values = list(seasonal_consumption.values())
+
+                        # Define colors for seasons
+                    #    colors = ['#ADD8E6', '#87CEEB', '#FFA07A', '#FF6347'] 
+
+                        # Plot the seasonal data
+                    #    fig, ax = plt.subplots()
+                    #    ax.bar(seasons, consumption_values, color=colors)
+                    #    ax.set_ylabel("Total Consumption (kWh)")
+                    #    ax.set_title(f"Seasonal Total Consumption for Account {account_number}")
+                    #    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+                        
+                    #    # Display plot
+                    #    st.pyplot(fig)
+
+                    # Plot accounts usage data if available
+                    #if account_number in accounts_usage:
+                    #    st.write(f"Total Demand KW (Usage) for Account {account_number}:")
+                    #    usage_data = accounts_usage[account_number]  # Assuming this is a NumPy array or list
+                    #    months = range(1, len(usage_data) + 1)  # Assuming usage_data has monthly values
+                        
+                        # If usage_data is a NumPy array or list, no need for `.values()`
+                    #    usage_values = list(usage_data)  # Directly convert the NumPy array to a list
+
+                    #    fig, ax = plt.subplots()
+                    #    ax.bar(months, usage_values, color='#FF6347')  # Plot the data
+                    #    ax.set_ylabel("Total Demand KW")
+                    #    ax.set_xlabel("Month")
+                    #    ax.set_title(f"Total Demand KW (Usage) for Account {account_number}")
+                    #    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+
+                    #    st.pyplot(fig)
+
+                    # Provide download button for the Excel file
+                    with open(excel_filename, "rb") as file:
+                        st.download_button(label=f"Download Excel File for Account {account_number}",
+                                           data=file,
+                                           file_name=excel_filename,
+                                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+            
+               
+            
+            
+            #st.write(f"Demand Rate: {Demand_Rate}")
+            #st.write(f"Electricity Rate: {Electricity_Rate}")
+            # Assuming you've already calculated Demand_Rate and Electricity_Rate
+            # Now build a table that includes rates for all accounts
+            account_numbers = list(Rate_account.keys())
+            account_numbers_str = [str(num) for num in account_numbers]
+
+            rates = list(Rate_account.values())
+            #data = {
+             #   "Rate Type": ["Demand Rate", "Electricity Rate","Late payment charge ($)","Account Number": account_numbers],
+             #   "Value": [Demand_Rate, Electricity_Rate,Late_payment_charge,"Rate (for each account)": rates]
+            #}
+            
+           # Create a dictionary to store the rate for each account
+            account_rates = {
+                f"Account Number ({account_number})": rate for account_number, rate in Rate_account.items()
+            }
+            
+            print("helooooo")
+            print(account_rates)
+
+            # Prepare the first table data for rates
+            data_rates = {
+                "Rate Type": list(account_rates.keys()) +["Demand Rate(Consolidate) ($/kW)", "Electricity Rate(Consolidate) ($/kWh)"] ,
+                "Value": list(account_rates.values())+ [Demand_Rate, Electricity_Rate] 
+            }
+
+            # Convert the data into a DataFrame for the first table
+            rates_df = pd.DataFrame(data_rates)
+            rates_df["Value"] = rates_df["Value"].astype(str)  # Convert values to string for display
+
+            # Display the first table (Rates Information)
+            #st.write("Rates Information:")
+            st.markdown("**Rates Information:**")
+
+            st.table(rates_df)
+
+            if Late_payment_charge > 0:
+                annual_saving_late = Late_payment_charge   # Assuming the charge is monthly
+                recommendation_value = f" $ {annual_saving_late:.2f}"
+                Late_payback="Immediate"
+            else:
+                recommendation_value = "Not Applicable"
+                Late_payback="NA"
+           
+            # operation_hours=3120    
+            Max_Demand = Total_Comsuption_kwh.sum() /  operation_hours
+            # Logic for recommendation based on max(Total Demand) and max_Demand
+            max_total_demand = max(total_demand_kw_12_months)  # Calculate the maximum total demand
+             # Calculate the min and max of total_demand_kw_12_months
+            min_demand = min(total_demand_kw_12_months)
+            max_demand = max(total_demand_kw_12_months)
+            average_demand = sum(total_demand_kw_12_months) / len(total_demand_kw_12_months)
+
+            if max_total_demand > Max_Demand:
+                max_demand = max(total_demand_kw_12_months)
+                annual_saving_Demand= (max_demand -Max_Demand)*Demand_Rate
+                annual_saving_Demand_kw=round(max_demand -Max_Demand)
+                demand_recommendation = f"$ {annual_saving_Demand:.2f}"
+                Demand_payback="Immediate"
+            if max_demand > average_demand:
+                annual_saving_Demand= (max_demand -average_demand)*Demand_Rate
+                annual_saving_Demand_kw=round(max_demand -average_demand)
+                demand_recommendation = f"$ {annual_saving_Demand:.2f}"
+                Demand_payback="Immediate"
+               
+            else:
+                demand_recommendation = "Not Applicable"
+                Demand_payback="NA"
+                annual_saving_Demand_kw="NA"
+                
+            if ('Consumption_on_Peak_kwh' in locals() and Consumption_on_Peak_kwh is not None and np.any(Consumption_on_Peak_kwh)) or \
+                        ('Consumption_off_Peak_kwh' in locals() and Consumption_off_Peak_kwh is not None and np.any(Consumption_off_Peak_kwh)):
+                annual_saving_Chage= 0.05* sum(Total_Energy_Fuel_Charge) 
+                Change_Rate_Recomendation = f"$ {annual_saving_Chage:.2f}"
+                Rate_paayback="Immediate"
+               
+                
+                
+                Recommendation_move_on_off_1= f" $ {Recommendation_move_on_off:.2f}"
+                on_paayback="Immediate"
+              
+            else:
+               Change_Rate_Recomendation = "Not Applicable"
+               Recommendation_move_on_off_1="Not Applicable"
+               Rate_paayback="NA"
+               on_paayback="NA"
+               
+               
+            if num_accounts>1:
+                annual_saving_decrease_n_meter = total_demand_kw_12_months.sum()*Demand_Rate*0.1   # Assuming the charge is monthly
+                meter_recommendation= f"$ {annual_saving_decrease_n_meter:.2f}"
+                meter_payback="Immediate"
+            else:
+                meter_recommendation = "Not Applicable"
+                meter_payback="NA"
+                
+              
+            
+            
+            
+            if window_value == 1:
+                TOTAL_ENERGY_CONSUMPTION = Total_Comsuption_kwh.sum()  # Sum of 12 months total consumption
+                # Calculate energy reduction due to potential tax eligibility
+                energy_reduction = TOTAL_ENERGY_CONSUMPTION * 0.3*0.1  # 10% energy reduction
+                annual_cost_energy_reduction = energy_reduction * Electricity_Rate  # cost saving
+                
+                
+                if annual_cost_energy_reduction> 0:
+                    
+                    tax_payback="Immediate"
+            else:
+                recommendation_value = "Not Applicable"
+                tax_payback="NA"
+            
+            not_available="NA"
+            # Prepare the second table (Recommendation)
+            data_recommendation = {
+                "Recommendation Type": [ "Late payment charge", "Max Demand Recommendation","Change Rate Recommendation","Load shifting: 10% On Peak Consumption to Off peak ","Decrease number of Account","Annual Cost Savings from Energy Reduction from Tax Benefit 179D(1)"],
+                "Value": [ recommendation_value, demand_recommendation,Change_Rate_Recomendation,Recommendation_move_on_off_1,meter_recommendation,f"${annual_cost_energy_reduction:.2f}"],
+                "Pay Back":[Late_payback,Demand_payback,Rate_paayback,on_paayback,meter_payback,tax_payback],
+                "kWh Saving":[not_available,not_available,"-" ,"-",not_available,energy_reduction],
+                "kW Saving":[not_available,annual_saving_Demand_kw,"-" ,"-",not_available ,not_available]
+            }
+
+            
+                            
+
+
+
+            # Convert the recommendation data into a DataFrame
+            recommendation_df = pd.DataFrame(data_recommendation)
+            recommendation_df["Value"] = recommendation_df["Value"].astype(str)  # Convert values to string for display
+
+            # Display the second table (Recommendation)
+            #st.write("Recommendation:")
+            st.markdown("**Recommendation:**")
+
+            #st.write("Recommendation number 4: It should be more deep analaysis but we calculated th")
+
+            st.table(recommendation_df)
+            
+            #st.write("179D Commercial Buildings Energy-Efficiency Tax Deduction:")
+            st.markdown("**Table Description of each Recommendation:**")
+       
+       
+       
+       
+            
+
+                #st.write("If you are eligible for the 179D Commercial Buildings Energy-Efficiency Tax Deduction and choose to upgrade your windows, you could significantly reduce your energy consumption and costs. By improving your building's windows, you can achieve a reduction of at least 10% in cooling consumption, which typically accounts for about 30% to 50% of your building's total energy consumption. This not only enhances energy efficiency but also contributes to lower utility bills, making it a financially beneficial investment. ")
+            st.markdown("""
+                <div style="text-align: justify;">
+                    <p>0- It means that by paying on time, you can save the entire amount that would otherwise be spent on late payment fees over the year through this AR.</p>
+                    <p>1- We calculated the expected demand by dividing the total consumption by the total operating hours and then compared it to the actual demand on the bill. This AR demonstrates the potential for total annual savings by reducing maximum demand through any suitable solution.</p>
+                    <p>2- If your account is on a Time-of-Use plan, you have the potential for annual savings by switching to a Standard Rate.</p>
+                    <p>3- If your account is on a Time-of-Use plan, you can reduce your bill by shifting usage from peak to off-peak hours. For example, we demonstrated an annual savings by reducing 10% of on-peak consumption and shifting it to off-peak hours.</p>
+                    <p>4- Demand charges are typically based on the maximum demand (in kW) recorded at a single meter during peak usage times. For companies with multiple meters, each meter is assessed individually for its peak demand.
+
+By consolidating meters, the total demand is measured across the entire facility or company, which can potentially reduce the overall peak demand. This occurs because different parts of the facility may reach their peak usage at different times, smoothing out the overall demand. As a result, the combined peak demand could be lower than the sum of the individual peaks. For example, we estimate that this consolidation could reduce the bill by approximately 10%. to</p>
+                    <p>5- If you are eligible for the 179D Commercial Buildings Energy-Efficiency Tax Deduction and choose to upgrade your windows, you could significantly reduce your energy consumption and costs. By improving your building's windows, you can achieve a reduction of at least 10% in cooling consumption, which typically accounts for about 30% to 50% of your building's total energy consumption. This not only enhances energy efficiency but also contributes to lower utility bills, making it a financially beneficial investment.</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+           
+
+            
+            # # If they use regular windows (1), calculate 10% energy reduction for tax savings
+            # if window_value == 1:
+            #     #st.write("179D Commercial Buildings Energy-Efficiency Tax Deduction:")
+            #     st.markdown("**1- 179D Commercial Buildings Energy-Efficiency Tax Deduction:**")
+
+            #     #st.write("If you are eligible for the 179D Commercial Buildings Energy-Efficiency Tax Deduction and choose to upgrade your windows, you could significantly reduce your energy consumption and costs. By improving your building's windows, you can achieve a reduction of at least 10% in cooling consumption, which typically accounts for about 30% to 50% of your building's total energy consumption. This not only enhances energy efficiency but also contributes to lower utility bills, making it a financially beneficial investment. ")
+            #     st.markdown("""
+            #     <div style="text-align: justify;">
+            #     If you are eligible for the 179D Commercial Buildings Energy-Efficiency Tax Deduction and choose to upgrade your windows, you could significantly reduce your energy consumption and costs. By improving your building's windows, you can achieve a reduction of at least 10% in cooling consumption, which typically accounts for about 30% to 50% of your building's total energy consumption. This not only enhances energy efficiency but also contributes to lower utility bills, making it a financially beneficial investment.
+            #     </div>
+            #     """, unsafe_allow_html=True)
+            #     # Calculate energy reduction due to potential tax eligibility
+            #     #energy_reduction = TOTAL_ENERGY_CONSUMPTION * 0.3*0.1  # 10% energy reduction
+            #     #annual_cost_energy_reduction = energy_reduction * Electricity_Rate  # cost saving
+
+
+            #     # Prepare the first table data for rates
+            #     data_Tax = {
+            #         "Description": ["Energy Reduction from Tax Benefit (10%)", "Annual Cost Savings from Energy Reduction"],
+            #         "Value": [f"{energy_reduction:.2f} kWh", f"${annual_cost_energy_reduction:.2f}"]
+            #     }
+
+            #     # Convert the data into a DataFrame for the first table
+            #     Tax_df = pd.DataFrame(data_Tax)
+
+            #     # Display the first table (Rates Information)
+                
+            #     st.table(Tax_df)
+
+            
+
+            
+            
+            
+            
+            
+            
+            
+          
+            # Define seasonal ranges based on typical months
+            seasonal_mapping = {
+                'Winter': Total_Comsuption_kwh[['Dec', 'Jan', 'Feb']].sum(),  # Dec (index 11), Jan (index 0), Feb (index 1)
+                'Spring': Total_Comsuption_kwh[['Mar', 'Apr', 'May']].sum(),         # Mar (index 2), Apr (index 3), May (index 4)
+                'Summer': Total_Comsuption_kwh[['Jun', 'Jul', 'Aug']].sum(),         # Jun (index 5), Jul (index 6), Aug (index 7)
+                'Fall': Total_Comsuption_kwh[['Sep', 'Oct', 'Nov']].sum()           # Sep (index 8), Oct (index 9), Nov (index 10)
+            }
+            
+            seasonal_mapping2 = {
+                'Winter': total_demand_kw_12_months[['Dec', 'Jan', 'Feb']].sum(),  # Dec (index 11), Jan (index 0), Feb (index 1)
+                'Spring':total_demand_kw_12_months[['Mar', 'Apr', 'May']].sum(),         # Mar (index 2), Apr (index 3), May (index 4)
+                'Summer': total_demand_kw_12_months[['Jun', 'Jul', 'Aug']].sum(),         # Jun (index 5), Jul (index 6), Aug (index 7)
+                'Fall': total_demand_kw_12_months[['Sep', 'Oct', 'Nov']].sum()           # Sep (index 8), Oct (index 9), Nov (index 10)
+            }
+            
+            
+            
+            st.markdown("**Report Summerized:**")
+
+            # Create the first figure with 2 subplots (1 row, 2 columns)
+            fig1, axs1 = plt.subplots(1, 2, figsize=(12, 6))
+
+            # Plot 1: Total Consumption KWh for 12 months
+            axs1[0].bar(months111, Total_Comsuption_kwh, color='#0EAD23')
+            axs1[0].set_ylabel("Total Consumption KWh")
+            axs1[0].set_xlabel("Month")
+            axs1[0].set_title("Total Consumption KWh ")
+            axs1[0].grid(True, axis='y', linestyle='--', alpha=0.7)
+
+            # Plot 2: Seasonal Total Consumption KWh
+            # Calculate Max_Demand (kW)
+            
+
+            
+            axs1[1].bar(months111, total_demand_kw_12_months, color='#CC181F')
+            axs1[1].set_ylabel("Total Demand KW")
+            axs1[1].set_xlabel("Month")
+            axs1[1].set_title(f"Total Demand KW with Max, Min, and Expected Demand Lines")
+            axs1[1].grid(True, axis='y', linestyle='--', alpha=0.7)
+
+            # Add horizontal line for Max_Demand (expected)
+            axs1[1].axhline(y=Max_Demand, color='darkblue', linestyle='--', linewidth=3, label=f'Max Demand Expectation = {Max_Demand:.2f} kW')
+
+           
+            # Add horizontal line for min demand
+            axs1[1].axhline(y=min_demand, color='green', linestyle='--', linewidth=2, label=f'Min Demand = {min_demand:.2f} kW')
+
+            # Add horizontal line for max demand
+            axs1[1].axhline(y=max_demand, color='orange', linestyle='--', linewidth=2, label=f'Max Demand = {max_demand:.2f} kW')
+
+            # Add a legend to show the constant values
+            axs1[1].legend()
+
+            # Adjust layout for better spacing in the figure
+            plt.tight_layout()
+
+            # Display the updated figure
+            st.pyplot(fig1)
+
+            # Proceed to plot only if there's valid non-zero data
+            if ('Consumption_on_Peak_kwh' in locals() and Consumption_on_Peak_kwh is not None and np.any(Consumption_on_Peak_kwh)) or \
+            ('Consumption_off_Peak_kwh' in locals() and Consumption_off_Peak_kwh is not None and np.any(Consumption_off_Peak_kwh)):
+
+                # Create a figure and axis for the grouped bar chart for Peak and Off-Peak consumption
+                fig, ax = plt.subplots(figsize=(12, 6))
+
+                # Set the positions for each group (the months)
+                x = np.arange(len(months111))  # the label locations
+
+                # Define the width of the bars
+                width = 0.35  # the width of the bars
+
+                # Plot Consumption On Peak kWh
+                if 'Consumption_on_Peak_kwh' in locals() and np.any(Consumption_on_Peak_kwh):
+                    bars1 = ax.bar(x - width/2, Consumption_on_Peak_kwh, width, label='Consumption On Peak kWh', color='#CC181F')
+
+                # Plot Consumption Off Peak kWh
+                if 'Consumption_off_Peak_kwh' in locals() and np.any(Consumption_off_Peak_kwh):
+                    bars2 = ax.bar(x + width/2, Consumption_off_Peak_kwh, width, label='Consumption Off Peak kWh', color='#0EAD23')
+
+                # Calculate the ratio of on-peak to off-peak consumption
+                ratio = np.divide(Consumption_on_Peak_kwh, Consumption_off_Peak_kwh, out=np.zeros_like(Consumption_on_Peak_kwh), where=Consumption_off_Peak_kwh!=0)
+
+                # Plot the ratio as a line
+                ax2 = ax.twinx()  # Create a secondary y-axis
+                ax2.plot(x, ratio, color='purple', marker='o', label='On-Peak/Off-Peak Ratio')
+                ax2.set_ylabel('On-Peak/Off-Peak Ratio')
+
+                # Add labels, title, and grid
+                ax.set_xlabel("Month")
+                ax.set_ylabel("Consumption (kWh)")
+                ax.set_title("Comparison of Consumption On Peak and Off Peak with Ratio")
+                ax.set_xticks(x)
+                ax.set_xticklabels(months111)  # Use the month labels from months111
+                ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+
+                # Add the extra items to the legend for On-Peak and Off-Peak Electricity Price with values
+                legend_elements = [
+                    plt.Line2D([0], [0], color='#CC181F', lw=4, label='Consumption On Peak kWh'),
+                    plt.Line2D([0], [0], color='#0EAD23', lw=4, label='Consumption Off Peak kWh'),
+                    #plt.Line2D([0], [0], color='blue', lw=2, linestyle='--', label=f'On Peak Electricity Price (${E_F_on_p:.2f})'),
+                    #plt.Line2D([0], [0], color='green', lw=2, linestyle='--', label=f'Off Peak Electricity Price (${E_F_off_p:.2f})'),
+                    plt.Line2D([0], [0], color='purple', lw=2, linestyle='-', marker='o', label='On-Peak/Off-Peak Ratio')
+                ]
+
+                # Show the legend with all elements
+                ax.legend(handles=legend_elements)
+
+                # Adjust layout for better spacing
+                plt.tight_layout()
+
+                # Display the plot in Streamlit
+                st.pyplot(fig)
+
+
+            else:
+                st.write("")
+                        
+            
+            
+
+            #,Total_Energy_Fuel_Charge
+
+            fig3, axs3 = plt.subplots(1, 2, figsize=(12, 6))
+            seasons = list(seasonal_mapping.keys())
+            total_consumption_values = list(seasonal_mapping.values())
+
+            axs3[0].bar(seasons, total_consumption_values, color=['#ADD8E6', '#70FF18', '#CC181F', '#FFF225'])
+            axs3[0].set_ylabel("Total Consumption KWh")
+            axs3[0].set_title("Seasonal Total Consumption KWh")
+            axs3[0].grid(True, axis='y', linestyle='--', alpha=0.7)
+            
+            
+            seasons = list(seasonal_mapping2.keys())
+            total_consumption_values2 = list(seasonal_mapping2.values())
+
+            axs3[1].bar(seasons, total_consumption_values2, color=['#ADD8E6', '#70FF18', '#CC181F', '#FFF225'])
+            axs3[1].set_ylabel("Total Demand KW")
+            axs3[1].set_title("Seasonal Total Demand KW")
+            axs3[1].grid(True, axis='y', linestyle='--', alpha=0.7)
+            
+            
+            plt.tight_layout()
+
+            # Display the second figure with two subplots
+            st.pyplot(fig3)
+            
+            # Create a figure and axis for the grouped bar chart
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            # Set the positions for each group (the months)
+            x = np.arange(len(months111))  # the label locations
+
+            # Define the width of the bars
+            width = 0.35  # the width of the bars
+
+            # Plot the bars for Total Energy & Fuel Charge (lighter blue)
+            bars1 = ax.bar(x - width/2, Total_Energy_Fuel_Charge, width, label='Total Energy & Fuel Charge', color='#1C65CF')
+
+            # Plot the bars for Total Demand Charge (darker blue)
+            bars2 = ax.bar(x + width/2, Total_Demand_Charge, width, label='Total Demand Charge', color='#CC181F')  # Darker blue
+
+            # Add labels, title, and grid
+            ax.set_xlabel("Month")
+            ax.set_ylabel("Charges ($)")
+            ax.set_title("Comparison of Total Energy & Fuel Charge and Total Demand Charge")
+            ax.set_xticks(x)
+            ax.set_xticklabels(months111)  # Use the month labels from months111
+            ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+
+            # Add a legend to differentiate between the two bars
+            ax.legend()
+
+            # Adjust layout for better spacing
+            plt.tight_layout()
+
+            # Display the grouped bar chart in Streamlit
+            st.pyplot(fig)
+            
+            
+            # Calculate the sum of total consumption for 12 months
+            total_consumption_12_months = sum(Total_Comsuption_kwh)
+
+            # Calculate 1% reduction in energy consumption
+            reduction_percentage = 0.01
+            reduction_in_kwh = total_consumption_12_months * reduction_percentage
+
+            # CO2 Reduction (tons)
+            emission_factor = 0.29  # kg CO2 per kWh
+            co2_reduction_kg = reduction_in_kwh * emission_factor
+            co2_reduction_tons = co2_reduction_kg / 1000  # Convert to metric tons
+
+            # Number of trees equivalent
+            trees_equivalent = co2_reduction_kg / 22  # 22 kg CO2 absorbed per tree/year
+
+            # Fancy Chart for CO2 Reduction and Trees Equivalent with dual-axis
+            fig, ax1 = plt.subplots(figsize=(10, 6))
+
+            # Bar for CO2 Reduction on the primary y-axis
+            ax1.bar('CO2 Reduction (tons)', co2_reduction_tons, color='#ff6347')
+            ax1.set_ylabel('CO2 Reduction (tons)', color='#ff6347')
+            ax1.tick_params(axis='y', labelcolor='#ff6347')
+
+            # Create a second y-axis for the tree equivalents
+            ax2 = ax1.twinx()
+            ax2.bar('Equivalent Trees', trees_equivalent, color='#228b22')
+            ax2.set_ylabel('Equivalent Number of Trees', color='#228b22')
+            ax2.tick_params(axis='y', labelcolor='#228b22')
+
+            # Add value annotations
+            ax1.text(0, co2_reduction_tons + 0.1, f'{co2_reduction_tons:.2f} tons', ha='center', va='bottom', color='#ff6347')
+            ax2.text(1, trees_equivalent + 10, f'{trees_equivalent:.2f} trees', ha='center', va='bottom', color='#228b22')
+
+            # Set title
+            fig.suptitle(f'Impact of 1% Energy Reduction on CO₂ and Trees')
+
+            # Display the dual-axis chart in Streamlit
+            st.pyplot(fig)
+
+
+            # Display calculation results
+            #st.write(f"Total Energy Consumption: {total_consumption_12_months} kWh")
+            #st.write(f"CO₂ Reduction from 1% Energy Reduction: {co2_reduction_tons:.2f} tons")
+            #st.write(f"Equivalent Trees for CO₂ Reduction: {trees_equivalent:.2f} trees")
+            
+          
+           
+           
+           # Constants for calculations
+            CO2_EMISSION_FACTOR = 0.29  # kg CO2/kWh
+            PERCENT_REDUCTION = 0.01  # 1% reduction
+            TOTAL_ENERGY_CONSUMPTION = Total_Comsuption_kwh.sum()  # Sum of 12 months total consumption
+
+            # Calculate CO2 reduction for 1% energy savings
+            co2_reduction_kg = TOTAL_ENERGY_CONSUMPTION * PERCENT_REDUCTION * CO2_EMISSION_FACTOR
+            co2_reduction_tons = co2_reduction_kg / 1000  # Convert to metric tons
+
+            # Calculate equivalent number of trees needed for sequestration
+            trees_needed = co2_reduction_kg / 22  # Each tree absorbs 22 kg of CO2 per year
+
+            # Calculate life expectancy improvement from PM2.5 reduction assumption
+            # Assuming 0.5 µg/m³ reduction in PM2.5 for every ton CO2 reduction (hypothetical assumption)
+            # pm25_reduction = 0.5 * co2_reduction_tons  # µg/m³ reduction based on CO2 savings
+            # life_expectancy_gain = 0.061 * (pm25_reduction / 10)  # Extrapolate based on Harvard study
+
+            # # Visualization of CO2 Reduction and Life Expectancy Gains
+            # fig, ax = plt.subplots(figsize=(12, 6))
+
+            # # Bar chart showing CO2 reduction and equivalent trees
+            # categories = ['CO2 Reduction (tons)', 'Equivalent Trees', 'Life Expectancy Gain (years)']
+            # values = [co2_reduction_tons, trees_needed, life_expectancy_gain]
+
+            # # Plotting bars
+            # bars = ax.bar(categories, values, color=['#FF6347', '#87CEEB', '#4682B4'])
+
+            # # Adding value annotations
+            # for i, value in enumerate(values):
+            #     ax.text(i, value + 0.05, f'{value:.2f}', ha='center', va='bottom')
+
+            # # Add labels and title
+            # ax.set_ylabel('Values')
+            # ax.set_title(f'Impact of 1% Energy Reduction on CO2, Trees, and Life Expectancy')
+
+            # # Show plot in Streamlit
+            # st.pyplot(fig)
+
+            # # Add textual details for better understanding
+            # st.markdown(f"""
+            # <div style="text-align: justify;">
+            
+            # ### The Impact of Clean Air on Life Expectancy
+            # Research from the **Harvard School of Public Health** has shown that reductions in particulate matter, especially **PM2.5**, can have a significant impact on life expectancy. The study found that for every **10 µg/m³** reduction in **PM2.5**, life expectancy improved by **0.61 years** in the U.S. Below is a chart showing how different levels of PM2.5 reduction correlate with life expectancy improvements, based on the findings of this study.
+
+            # Reducing energy consumption not only helps mitigate climate change by reducing CO₂ emissions but also contributes to cleaner air and longer life expectancy.
+            # </div>
+            # """, unsafe_allow_html=True)
+
+          
         else:
-            st.warning("Please upload at least one PDF file and specify the number of accounts.")
+            st.warning("Please upload at least one PDF file for each account and specify the number of accounts.")
 
 if __name__ == "__main__":
     app()
+
